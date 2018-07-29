@@ -1,7 +1,5 @@
-import { loadSprites, loadData } from 'chipdata';
+import { loadData } from 'chipdata';
 import { startGame } from 'game';
 
-
-loadSprites();
-// loadData();
+loadData();
 startGame();

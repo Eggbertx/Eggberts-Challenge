@@ -1,4 +1,4 @@
 dist/
-sounds/*.WAV
-music/*.MID
+sounds/*
+music/*
 CHIPS.DAT
