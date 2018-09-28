@@ -23,8 +23,6 @@ const numbersPos = {
 	chipsLeft: {x: 368, y: 197}
 };
 
-const tiles = loadTiles("@/images/tileset.png");
-
 let digitsX = []; // each digt is 16x27
 
 
@@ -75,18 +73,22 @@ export default class Game extends Thread {
 		this.items = [];
 
 		registerEvent(Keyboard.Default, Key.Up, () => {
+			if(this.isObstructed(this.playerPos.x, this.playerPos.y-1, this.playerPos.layer)) return;
 			this.cameraY++;
 			this.moveTo(this.playerPos, {x: this.playerPos.x, y: this.playerPos.y-1, layer: this.playerPos.layer});
 		});
 		registerEvent(Keyboard.Default, Key.Down, () => {
+			if(this.isObstructed(this.playerPos.x, this.playerPos.y+1, this.playerPos.layer)) return;
 			this.cameraY--;
 			this.moveTo(this.playerPos, {x: this.playerPos.x, y: this.playerPos.y+1, layer: this.playerPos.layer});
 		});
 		registerEvent(Keyboard.Default, Key.Left, () => {
+			if(this.isObstructed(this.playerPos.x-1, this.playerPos.y, this.playerPos.layer)) return;
 			this.cameraX++;
 			this.moveTo(this.playerPos, {x: this.playerPos.x-1, y: this.playerPos.y, layer: this.playerPos.layer});
 		});
 		registerEvent(Keyboard.Default, Key.Right, () => {
+			if(this.isObstructed(this.playerPos.x+1, this.playerPos.y, this.playerPos.layer)) return;
 			this.cameraX--;
 			this.moveTo(this.playerPos, {x: this.playerPos.x+1, y: this.playerPos.y, layer: this.playerPos.layer});
 		});
@@ -96,6 +98,9 @@ export default class Game extends Thread {
 		Music.push("CHIP02.OGG");
 
 		loadData();
+		var tiles = loadTiles("@/images/tileset.png");
+		this.floorTiles = tiles.floors;
+		this.spriteTiles = tiles.sprites;
 	}
 
 	drawMap(offsetX, offsetY) {
@@ -103,12 +108,58 @@ export default class Game extends Thread {
 			var x = (t % 32) + offsetX;
 			var y = Math.floor(t/32) + offsetY;
 	
-			var bottomTile = tiles[this.currentLevel.bottomTiles[t]];
+			var bottomTile = this.floorTiles[this.currentLevel.bottomTiles[t]];
 			Prim.blit(screen, x*32 - 16, y * 32 + 16, bottomTile);
 	
-			var topTile = tiles[this.currentLevel.topTiles[t]];
+			var topTile = this.floorTiles[this.currentLevel.topTiles[t]];
 			Prim.blit(screen, x*32 - 16,y*32 + 16,topTile);
 		}
+		Sphere.abort(this.numChips);
+	}
+	
+	isObstructed(x, y, layer) {
+		var tileAt = this.getTile(x, y, layer);
+		var index = posToIndex(x, y)
+		switch(tileAt) {
+			case Tile.Wall:
+				return true;
+			case Tile.RedLock:
+				if(this.redKey > 0) {
+					this.redKey--;
+					if(layer == 0)
+						this.currentLevel.bottomTiles[index] = Tile.Floor;
+					else 
+						this.currentLevel.topTiles[index] = Tile.Floor;
+				} else {
+					return true;
+				}
+				break;
+
+			case Tile.GreenLock:
+				if(this.greenKey > 0) {
+					// this.greenKey--;
+					if(layer == 0)
+						this.currentLevel.bottomTiles[index] = Tile.Floor;
+					else 
+						this.currentLevel.topTiles[index] = Tile.Floor;
+				} else {
+					return true;
+				}
+				break;
+
+			case Tile.YellowLock:
+				if(this.yellowKey > 0) {
+					this.yellowKey--;
+					if(layer == 0)
+						this.currentLevel.bottomTiles[index] = Tile.Floor;
+					else 
+						this.currentLevel.topTiles[index] = Tile.Floor;
+				} else {
+					return true;
+				}
+				break;
+		}
+		return false;
 	}
 
 	moveTo(fromPos, toPos) {
@@ -116,18 +167,18 @@ export default class Game extends Thread {
 		var fromIndex = posToIndex(fromPos.x, fromPos.y);
 		var toIndex = posToIndex(toPos.x, toPos.y);
 		if(toPos.layer == 0) {
-			this.currentLevel.bottomTiles[fromIndex] = Tile.FLOOR;
+			this.currentLevel.bottomTiles[fromIndex] = Tile.Floor;
 			this.currentLevel.bottomTiles[toIndex] = fromTile;
 		} else {
-			this.currentLevel.topTiles[fromIndex] = Tile.FLOOR;
+			this.currentLevel.topTiles[fromIndex] = Tile.Floor;
 			this.currentLevel.topTiles[toIndex] = fromTile;
 		}
 	}
 
-	getplayerPos() {
+	getPlayerPos() {
 		for(var bt = 0; bt < this.currentLevel.numBottomTiles; bt++) {
 			var bottomTile = this.currentLevel.bottomTiles[bt];
-			if(bottomTile >= Tile.CHIP_UP && bottomTile <= Tile.CHIP_RIGHT) {
+			if(bottomTile >= Tile.ChipNorth && bottomTile <= Tile.ChipEast) {
 				var btPos = indexToPos(bt);
 				return {x: btPos.x, y: btPos.y, layer: 0};
 			}
@@ -135,7 +186,7 @@ export default class Game extends Thread {
 	
 		for(var tt = 0; tt < this.currentLevel.numTopTiles; tt++) {
 			var topTile = this.currentLevel.topTiles[tt];
-			if(topTile >= Tile.CHIP_UP && topTile <= Tile.CHIP_RIGHT) {
+			if(topTile >= Tile.ChipNorth && topTile <= Tile.ChipEast) {
 				var ttPos = indexToPos(tt);
 				return {x: ttPos.x, y: ttPos.y, layer: 1};
 			}
@@ -147,21 +198,17 @@ export default class Game extends Thread {
 
 	getTile(x, y, layer) {
 		var layerBytes;
-		var tile = Tile.FLOOR;
+		var tile = Tile.Floor;
 		if(layer == 1) layerBytes = this.currentLevel.topTiles
 		else layerBytes = this.currentLevel.bottomTiles;
 		tile = layerBytes[posToIndex(x, y)];
-		if(tile == undefined) tile = Tile.FLOOR;
+		if(tile == undefined) tile = Tile.Floor;
 		return tile;
 	}
 
 	on_update() {
 		if(kb.getKey() == Key.Escape) Sphere.shutDown();
-		this.playerPos = this.getplayerPos();
-		
-		if(this.gameRunning) {
-	
-		}
+		this.playerPos = this.getPlayerPos();
 	}
 
 	on_render() {
