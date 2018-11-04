@@ -1,7 +1,8 @@
 import { Console, Music, Prim, Thread } from 'sphere-runtime';
 import { registerEvent } from 'buttonEvent';
 
-import { levels, loadTiles, loadData, Tile } from './chipdata';
+import { levels, loadSounds, loadTiles, loadData } from './chipdata';
+import { Tile, reactions } from './tiles';
 
 const kb = Keyboard.Default;
 const font = Font.Default;
@@ -39,11 +40,6 @@ function indexToPos(index) {
 
 
 export default class Game extends Thread {
-
-	get currentLevel() {
-		return levels[this.levelNum];
-	}
-
 	constructor() {
 		super();
 
@@ -58,18 +54,7 @@ export default class Game extends Thread {
 		this.lastMoved = 0;
 		this.gameRunning = true;
 		this.levelNum = 0;
-		this.timeLeft = 100;
-		this.chipsLeft = 10;
 
-		this.fireBoots = false;
-		this.waterBoots = false;
-		this.iceBoots = false;
-		this.pushBoots = false;
-
-		this.redKey = 0;
-		this.greenKey = 0;
-		this.blueKey = 0;
-		this.yellowKey = 0;
 		this.items = [];
 
 		registerEvent(Keyboard.Default, Key.Up, () => {
@@ -93,11 +78,12 @@ export default class Game extends Thread {
 			this.moveTo(this.playerPos, {x: this.playerPos.x+1, y: this.playerPos.y, layer: this.playerPos.layer});
 		});
 
-		Music.push("CANYON.OGG");
-		Music.push("CHIP01.OGG");
 		Music.push("CHIP02.OGG");
+		Music.push("CHIP01.OGG");
+		Music.push("CANYON.OGG");
 
 		loadData();
+		this.currentLevel = levels[this.levelNum];
 		var tiles = loadTiles("@/images/tileset.png");
 		this.floorTiles = tiles.floors;
 		this.spriteTiles = tiles.sprites;
@@ -114,64 +100,36 @@ export default class Game extends Thread {
 			var topTile = this.floorTiles[this.currentLevel.topTiles[t]];
 			Prim.blit(screen, x*32 - 16,y*32 + 16,topTile);
 		}
-		Sphere.abort(this.numChips);
 	}
 	
 	isObstructed(x, y, layer) {
-		var tileAt = this.getTile(x, y, layer);
-		var index = posToIndex(x, y)
-		switch(tileAt) {
-			case Tile.Wall:
-				return true;
-			case Tile.RedLock:
-				if(this.redKey > 0) {
-					this.redKey--;
-					if(layer == 0)
-						this.currentLevel.bottomTiles[index] = Tile.Floor;
-					else 
-						this.currentLevel.topTiles[index] = Tile.Floor;
-				} else {
-					return true;
-				}
-				break;
-
-			case Tile.GreenLock:
-				if(this.greenKey > 0) {
-					// this.greenKey--;
-					if(layer == 0)
-						this.currentLevel.bottomTiles[index] = Tile.Floor;
-					else 
-						this.currentLevel.topTiles[index] = Tile.Floor;
-				} else {
-					return true;
-				}
-				break;
-
-			case Tile.YellowLock:
-				if(this.yellowKey > 0) {
-					this.yellowKey--;
-					if(layer == 0)
-						this.currentLevel.bottomTiles[index] = Tile.Floor;
-					else 
-						this.currentLevel.topTiles[index] = Tile.Floor;
-				} else {
-					return true;
-				}
-				break;
-		}
-		return false;
+		let tileAt = this.getTile(x, y, layer);
+		let index = posToIndex(x, y)
+		return reactions[tileAt].isObstructed(this.currentLevel, {x,y,layer},index);
 	}
 
 	moveTo(fromPos, toPos) {
 		var fromTile = this.getTile(fromPos.x, fromPos.y, fromPos.layer);
 		var fromIndex = posToIndex(fromPos.x, fromPos.y);
 		var toIndex = posToIndex(toPos.x, toPos.y);
+		let tileAt = this.getTile(toPos.x, toPos.y, toPos.layer);
 		if(toPos.layer == 0) {
 			this.currentLevel.bottomTiles[fromIndex] = Tile.Floor;
 			this.currentLevel.bottomTiles[toIndex] = fromTile;
 		} else {
 			this.currentLevel.topTiles[fromIndex] = Tile.Floor;
 			this.currentLevel.topTiles[toIndex] = fromTile;
+		}
+		reactions[tileAt].onMoveTo(this.currentLevel, toPos, toIndex);
+		if(this.currentLevel.chipsLeft == 0) {
+			for(let t = 0; t < this.currentLevel.numTopTiles; t++) {
+				if(this.currentLevel.topTiles[t] == Tile.PortalSocket)
+				this.currentLevel.topTiles[t] = Tile.Floor;
+			}
+			for(let b = 0; b < this.currentLevel.numBottomTiles; b++) {
+				if(this.currentLevel.bottomTiles[b] == Tile.PortalSocket)
+				this.currentLevel.bottomTiles[b] = Tile.Floor;
+			}
 		}
 	}
 
@@ -206,6 +164,13 @@ export default class Game extends Thread {
 		return tile;
 	}
 
+	setTile(x, y, layer, tile) {
+		let fromTile = this.getTile(x,y,layer);
+		if(layer == 1) this.currentLevel.topTiles[posToIndex(x,y)] = tile;
+		else layerBytes = this.currentLevel.bottomTiles[posToIndex(x,y)] = tile;
+		return fromTile;
+	}
+
 	on_update() {
 		if(kb.getKey() == Key.Escape) Sphere.shutDown();
 		this.playerPos = this.getPlayerPos();
@@ -215,19 +180,19 @@ export default class Game extends Thread {
 		this.drawMap(-10+this.cameraX,-10+this.cameraY);
 		Prim.blit(screen, 0, 0, background);
 		drawNumber(this.levelNum+1,numbersPos.level.x, numbersPos.level.y);
-		drawNumber(this.timeLeft,numbersPos.time.x, numbersPos.time.y);
-		drawNumber(this.chipsLeft,numbersPos.chipsLeft.x, numbersPos.chipsLeft.y);
+		drawNumber(this.currentLevel.timeLeft,numbersPos.time.x, numbersPos.time.y);
+		drawNumber(this.currentLevel.chipsLeft,numbersPos.chipsLeft.x, numbersPos.chipsLeft.y);
 		Prim.blit(screen, mouse.x, mouse.y, pointerImg);
-		font.drawText(screen, 0, 0, "Camera: (" + this.cameraX + "," + this.cameraY + ")");
-		font.drawText(screen, 0, 12, "Player: (x:" + this.playerPos.x + ",y:" + this.playerPos.y + ", layer:" + this.playerPos.layer + ")");
+		// font.drawText(screen, 0, 0, "Camera: (" + this.cameraX + "," + this.cameraY + ")");
+		// font.drawText(screen, 0, 12, "Player: (x:" + this.playerPos.x + ",y:" + this.playerPos.y + ", layer:" + this.playerPos.layer + ")");
 	}
 }
 
 function drawNumber(number,x,y) {
 	if(number > 999 || number < 0)
 		throw new RangeError("Invalid number: " + number);
+	let digits = number.toString().split('').map(Number);
 
-	var digits = number.toString().split('').map(Number);
 	if(digits.length == 3) {
 		Prim.blitSection(screen, x, y, numbersImg, digitsX[digits[0]], 0, 16, 27);
 		Prim.blitSection(screen, x+17, y, numbersImg, digitsX[digits[1]], 0, 16, 27);

@@ -12,7 +12,11 @@ Object.assign(Sphere.Game, {
 install('@/bin', files('src/*.mjs', true));
 install('@/lib', files('lib/*.mjs', true));
 install('@/images', files('images/*.png', false));
-install('@/sounds', files('sounds/*', true));
-install('@/music', files('music/*', true));
+install('@/sounds', files('sounds/*.wav', true));
+install('@/sounds', files('sounds/*.WAV', true));
+install('@/sounds', files('sounds/*.ogg', true));
+install('@/sounds', files('sounds/*.OGG', true));
+install('@/music', files('music/*.OGG', true));
+install('@/music', files('music/*.ogg', true));
 install('@/', files('CHIPS.DAT'));
 install('@/', files('images/icon.png'));

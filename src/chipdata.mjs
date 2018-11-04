@@ -1,139 +1,30 @@
 // load and parse DAT file
 import { DataStream, Prim } from 'sphere-runtime';
 
-var sprites = []; // array of images for each sprite
+let sprites = []; // array of images for each sprite
 
-export var numLevels;
-export var levels = [];
-
-export const Tile = {
-	Floor: 0,
-	Wall: 1,
-	Chip: 2,
-	Water: 3,
-	Fire: 4,
-	Floor2: 5,
-	TopWall: 6,
-	LeftWall: 7,
-	BottomWall: 8,
-	RightWall: 9,
-	Dirt: 10,
-	WetDirt: 11,
-	Ice: 12,
-	ForceDown: 13,
-	Dirt2: 14,
-	Dirt3: 15,
-	Dirt4: 16,
-	Dirt5: 17,
-	ForceUp: 18,
-	ForceRight: 19,
-	ForceLeft: 20,
-	Portal: 21,
-	BlueLock: 22,
-	RedLock: 23,
-	GreenLock: 24,
-	YellowLock: 25,
-	IceWallUL: 26,
-	IceWallUR: 27,
-	IceWallBR: 28,
-	IceWallBL: 29,
-	FalseWall: 30,
-	FalseWall2: 31,
-	Floor3: 32,
-	Spy: 33,
-	PortalSocket: 34,
-	DoorToggle: 35,
-	FireballSpawner: 36,
-	BlockedWall: 37,
-	UnblockedWall: 38,
-	GreyButton: 39, // ??
-	TankButton: 40,
-	Teleport: 41, // ??
-	Bomb: 42,
-	DirtButton: 43,
-	Floor4: 44,
-	Gravel: 45,
-	WallButton: 46,
-	Info: 47,
-	FloorWallBR: 48, // ??
-	SpecialWall: 49, // ??
-	SpecialForce: 50, // ??
-	Splash: 51,
-	BurnedFire: 52,
-	BurnedNoFire: 53,
-	Floor5: 54,
-	Floor6: 55,
-	Floor7: 56,
-	PortalWin: 57,
-	Portal2: 58,
-	Portal3: 59,
-	SwimNorth: 60,
-	SwimWest: 61,
-	SwimSouth: 62,
-	SwimEast: 63,
-	BugNorth: 64,
-	BugWest: 65,
-	BugSouth: 66,
-	BugEast: 67,
-	Fireball: 68,
-	Fireball2: 69,
-	Fireball3: 70,
-	Fireball4: 71,
-	BallNorth: 72,
-	BallWest: 73,
-	BallSouth: 74,
-	BallEast: 75,
-	TankNorth: 76,
-	TankWest: 77,
-	TankSouth: 78,
-	TankEast: 79,
-	ShipNorth: 80,
-	ShipWest: 81,
-	ShipSouth: 82,
-	ShipEast: 83,
-	MonsterNorth: 84,
-	MonsterWest: 85,
-	MonsterSouth: 86,
-	MonsterEast: 87,
-	Ball2North: 88,
-	Ball2West: 89,
-	Ball2South: 90,
-	Ball2East: 91,
-	Slime: 92,
-	Slime2: 93,
-	Slime3: 94,
-	Slime4: 95,
-	CaterpillarNorth: 96,
-	CaterpillarWest: 97,
-	CaterpillarSouth: 98,
-	CaterpillarEast: 99,
-	BlueKey: 100,
-	RedKey: 101,
-	GreenKey: 102,
-	YellowKey: 103,
-	Flippers: 104,
-	FireBoots: 105,
-	IceSkates: 106,
-	SuctionBoots: 107,
-	ChipNorth: 108,
-	ChipWest: 109,
-	ChipSouth: 110,
-	ChipEast: 111
-};
+export let numLevels;
+export let levels = [];
+export let sounds = [];
 
 function makeLevel(levelInfo,topTiles,bottomTiles,fields) {
-	levels.push({
-		ID: levelInfo.levelNum,
-		numBytes: levelInfo.numBytes,
-		timeLimit: levelInfo.timeLimit,
-		reqChips: levelInfo.reqChips,
-		levelDetail: levelInfo.levelDetail,
+	levels.push(Object.assign({
 		numTopTiles: topTiles.length,
 		topTiles: topTiles,
 		numBottomTiles: bottomTiles.length,
 		bottomTiles: bottomTiles,
-		fields: fields
-	});
+		fields: fields,
+
+		playerPos: {x: null, y: null, layer: null},
+		fireBoots: false,
+		waterBoots: false,
+		iceBoots: false,
+		pushBoots: false,
+		redKey: 0,
+		greenKey: 0,
+		blueKey: 0,
+		yellowKey: 0
+	}, levelInfo));
 }
 
 
@@ -159,32 +50,24 @@ function decodeRLE(reader, numBytes) {
 	return decoded;
 }
 
-export function loadAllLevels() {
-
-}
-
-export function loadLevel() {
-
-}
-
 export function loadData() {
 	let reader = new DataStream("CHIPS.DAT", FileOp.Read);
-	if(!reader.readUint8() == 0xAC ||
-		!reader.readUint8() == 0xAA ||
-		!reader.readUint8() == 0x02 ||
-		!reader.readUint8() == 0x00) {
-			throw new Error("Invalid CHIPS.DAT signature");
+	if(!reader.readUint8() == 0xAC
+	|| !reader.readUint8() == 0xAA
+	|| !reader.readUint8() == 0x02
+	|| !reader.readUint8() == 0x00) {
+		throw new Error("Invalid CHIPS.DAT signature");
 	}
 
 	numLevels = reader.readUint16(true);
-	SSj.log(`CHIPS.DAT has ${numLevels} levels`);
+	// SSj.log(`CHIPS.DAT has ${numLevels} levels`);
 
 	for(var l = 0; l < numLevels; l++) {
 		var levelInfo = reader.readStruct({
 			numBytes: {type: 'uint16le'},
 			levelNum: {type: 'uint16le'},
-			timeLimit: {type: 'uint16le'},
-			reqChips: {type: 'uint16le'},
+			timeLeft: {type: 'uint16le'},
+			chipsLeft: {type: 'uint16le'},
 			levelDetail: {type: 'uint16le'}
 		});
 		/*SSj.log(`Level ${levelInfo.levelNum} at reader position ${reader.position}:`);
@@ -280,6 +163,16 @@ export function loadData() {
 		//SSj.log("");
 		makeLevel(levelInfo,layer1Bytes, layer2Bytes, fields);
 	}
+	loadSounds();
+}
+
+export function loadSounds() {
+	sounds["bell"] = new Sample("@/sounds/BELL.WAV");
+	sounds["blip2"] = new Sample("@/sounds/BLIP2.WAV");
+	sounds["bummer"] = new Sample("@/sounds/BUMMER.WAV");
+	sounds["chimes"] = new Sample("@/sounds/CHIMES.WAV");
+	sounds["ditty1"] = new Sample("@/sounds/DITTY1.WAV");
+	return sounds;
 }
 
 export function loadTiles(filename) {

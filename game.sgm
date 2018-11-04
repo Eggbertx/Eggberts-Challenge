@@ -1,6 +1,0 @@
-name=Eggbert's Challenge
-author=Eggbert
-description=A Chip's Challenge engine written in Sphere
-screen_width=512
-screen_height=352
-script=main.js
