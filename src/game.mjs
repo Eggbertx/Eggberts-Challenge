@@ -54,6 +54,7 @@ export default class Game extends Thread {
 		this.playerPos = {x: undefined, y: undefined, layer: undefined};
 		this.lastMoved = 0;
 		this.gameRunning = true;
+		this.now = Date.now();
 		this.levelNum = 0;
 
 		this.items = [];
@@ -84,6 +85,7 @@ export default class Game extends Thread {
 		Music.push("CANYON.OGG");
 
 		loadData();
+		this.sounds = loadSounds();
 		this.currentLevel = levels[this.levelNum];
 		let tiles = loadTiles("@/images/tileset.png");
 		this.floorTiles = tiles.floors;
@@ -102,8 +104,6 @@ export default class Game extends Thread {
 				let width = font.getTextSize(numKeys).width;
 				font.drawText(screen, x, y, numKeys, Color.Black);
 			}
-
-			
 		}
 	}
 
@@ -209,6 +209,15 @@ export default class Game extends Thread {
 	on_update() {
 		if(kb.getKey() == Key.Escape) Sphere.shutDown();
 		this.playerPos = this.getPlayerPos();
+		let newNow = Date.now();
+		if(newNow >= this.now + 1000) {
+			this.now = newNow;
+			this.currentLevel.timeLeft--;
+		}
+		if(this.currentLevel.timeLeft == 0 && this.gameRunning) {
+			this.gameRunning = false;
+			this.sounds["bell"].play(Mixer.Default);
+		}
 	}
 
 	on_render() {
@@ -225,8 +234,8 @@ export default class Game extends Thread {
 }
 
 function drawNumber(number,x,y) {
-	if(number > 999 || number < 0)
-		throw new RangeError("Invalid number: " + number);
+	if(number > 999) number = 999;
+	if(number < 0) number = 0;
 	let digits = number.toString().split('').map(Number);
 
 	if(digits.length == 3) {

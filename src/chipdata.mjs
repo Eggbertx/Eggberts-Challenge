@@ -160,7 +160,6 @@ export function loadData() {
 		//SSj.log("");
 		makeLevel(levelInfo,layer1Bytes, layer2Bytes, fields);
 	}
-	loadSounds();
 }
 
 export function loadSounds() {
