@@ -24,6 +24,7 @@ const numbersPos = {
 	chipsLeft: {x: 368, y: 197}
 };
 
+const inventoryPos = {x:326,y:232};
 let digitsX = []; // each digt is 16x27
 
 
@@ -84,20 +85,37 @@ export default class Game extends Thread {
 
 		loadData();
 		this.currentLevel = levels[this.levelNum];
-		var tiles = loadTiles("@/images/tileset.png");
+		let tiles = loadTiles("@/images/tileset.png");
 		this.floorTiles = tiles.floors;
 		this.spriteTiles = tiles.sprites;
 	}
 
+	drawInventory() {
+		let y = inventoryPos.y;
+		let unique = this.getUniqueKeys();
+		for(let i = 0; i < unique.length; i++) {
+			if(i == 5) y += 32;
+			let x = inventoryPos.x+i*32;
+			let numKeys = this.countKeys(unique[i]);
+			Prim.blit(screen, x,y, this.spriteTiles[unique[i]-64]);
+			if(unique[i] > 99 && unique[i] < 104) {
+				let width = font.getTextSize(numKeys).width;
+				font.drawText(screen, x, y, numKeys, Color.Black);
+			}
+
+			
+		}
+	}
+
 	drawMap(offsetX, offsetY) {
-		for(var t = 0; t < this.currentLevel.numBottomTiles; t++) {
-			var x = (t % 32) + offsetX;
-			var y = Math.floor(t/32) + offsetY;
+		for(let t = 0; t < this.currentLevel.numBottomTiles; t++) {
+			let x = (t % 32) + offsetX;
+			let y = Math.floor(t/32) + offsetY;
 	
-			var bottomTile = this.floorTiles[this.currentLevel.bottomTiles[t]];
+			let bottomTile = this.floorTiles[this.currentLevel.bottomTiles[t]];
 			Prim.blit(screen, x*32 - 16, y * 32 + 16, bottomTile);
 	
-			var topTile = this.floorTiles[this.currentLevel.topTiles[t]];
+			let topTile = this.floorTiles[this.currentLevel.topTiles[t]];
 			Prim.blit(screen, x*32 - 16,y*32 + 16,topTile);
 		}
 	}
@@ -109,9 +127,9 @@ export default class Game extends Thread {
 	}
 
 	moveTo(fromPos, toPos) {
-		var fromTile = this.getTile(fromPos.x, fromPos.y, fromPos.layer);
-		var fromIndex = posToIndex(fromPos.x, fromPos.y);
-		var toIndex = posToIndex(toPos.x, toPos.y);
+		let fromTile = this.getTile(fromPos.x, fromPos.y, fromPos.layer);
+		let fromIndex = posToIndex(fromPos.x, fromPos.y);
+		let toIndex = posToIndex(toPos.x, toPos.y);
 		let tileAt = this.getTile(toPos.x, toPos.y, toPos.layer);
 		if(toPos.layer == 0) {
 			this.currentLevel.bottomTiles[fromIndex] = Tile.Floor;
@@ -134,18 +152,18 @@ export default class Game extends Thread {
 	}
 
 	getPlayerPos() {
-		for(var bt = 0; bt < this.currentLevel.numBottomTiles; bt++) {
-			var bottomTile = this.currentLevel.bottomTiles[bt];
+		for(let bt = 0; bt < this.currentLevel.numBottomTiles; bt++) {
+			let bottomTile = this.currentLevel.bottomTiles[bt];
 			if(bottomTile >= Tile.ChipNorth && bottomTile <= Tile.ChipEast) {
-				var btPos = indexToPos(bt);
+				let btPos = indexToPos(bt);
 				return {x: btPos.x, y: btPos.y, layer: 0};
 			}
 		}
 	
-		for(var tt = 0; tt < this.currentLevel.numTopTiles; tt++) {
-			var topTile = this.currentLevel.topTiles[tt];
+		for(let tt = 0; tt < this.currentLevel.numTopTiles; tt++) {
+			let topTile = this.currentLevel.topTiles[tt];
 			if(topTile >= Tile.ChipNorth && topTile <= Tile.ChipEast) {
-				var ttPos = indexToPos(tt);
+				let ttPos = indexToPos(tt);
 				return {x: ttPos.x, y: ttPos.y, layer: 1};
 			}
 		}
@@ -155,13 +173,30 @@ export default class Game extends Thread {
 	}
 
 	getTile(x, y, layer) {
-		var layerBytes;
-		var tile = Tile.Floor;
+		let layerBytes;
+		let tile = Tile.Floor;
 		if(layer == 1) layerBytes = this.currentLevel.topTiles
 		else layerBytes = this.currentLevel.bottomTiles;
 		tile = layerBytes[posToIndex(x, y)];
 		if(tile == undefined) tile = Tile.Floor;
 		return tile;
+	}
+
+	countKeys(keyType) {
+		let num = 0;
+		for(let i = 0; i < this.currentLevel.inventory.length; i++) {
+			if(this.currentLevel.inventory[i] == keyType) num++;
+		}
+		return num;
+	}
+
+	getUniqueKeys() {
+		let unique = [];
+		for(let i = 0; i < this.currentLevel.inventory.length; i++) {
+			if(unique.indexOf(this.currentLevel.inventory[i]) == -1)
+				unique.push(this.currentLevel.inventory[i]);
+		}
+		return unique;
 	}
 
 	setTile(x, y, layer, tile) {
@@ -185,6 +220,7 @@ export default class Game extends Thread {
 		Prim.blit(screen, mouse.x, mouse.y, pointerImg);
 		// font.drawText(screen, 0, 0, "Camera: (" + this.cameraX + "," + this.cameraY + ")");
 		// font.drawText(screen, 0, 12, "Player: (x:" + this.playerPos.x + ",y:" + this.playerPos.y + ", layer:" + this.playerPos.layer + ")");
+		this.drawInventory();
 	}
 }
 

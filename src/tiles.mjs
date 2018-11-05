@@ -297,42 +297,46 @@ export let reactions = [
 	},
 	{ // BlueLock
 		isObstructed(level, tilePos, index) {
-			return level.blueKey == 0;
+			return level.inventory.indexOf(Tile.BlueKey) == -1;
 		},
 		onMoveTo(level, tilePos, index) {
-			if(level.blueKey > 0) {
-				level.blueKey--;
-			} else {
+			let i = level.inventory.indexOf(Tile.BlueKey);
+			if(i > -1)
+				level.inventory.splice(i, 1);
+			else
 				return true;
-			}
 		}
 	},
 	{ // RedLock
 		isObstructed(level, tilePos, index) {
-			return level.redKey == 0;
+			return level.inventory.indexOf(Tile.RedKey) == -1;
 		},
 		onMoveTo(level, tilePos, index) {
-			if(level.redKey > 0) {
-				level.redKey--;
-			} else {
+			let i = level.inventory.indexOf(Tile.RedKey);
+			if(i > -1)
+				level.inventory.splice(i, 1);
+			else
 				return true;
-			}
 		}
 	},
 	{ // GreenLock
 		isObstructed(level, tilePos, index) {
-			return level.greenKey == 0;
+			return level.inventory.indexOf(Tile.GreenKey) == -1;
 		},
 		onMoveTo(level, tilePos, index) {
-	
+			
 		}
 	},
 	{ // YellowLock
 		isObstructed(level, tilePos, index) {
-			return level.yellowKey == 0;
+			return level.inventory.indexOf(Tile.YellowKey) == -1;
 		},
 		onMoveTo(level, tilePos, index) {
-	
+			let i = level.inventory.indexOf(Tile.YellowKey);
+			if(i > -1)
+				level.inventory.splice(i, 1);
+			else
+				return true;
 		}
 	},
 	{ // IceWallUL
@@ -933,7 +937,8 @@ export let reactions = [
 			return false;
 		},
 		onMoveTo(level, tilePos, index) {
-			level.blueKey++;
+			// level.blueKey++;
+			level.inventory.push(Tile.BlueKey);
 		}
 	},
 	{ // RedKey: 101,
@@ -941,7 +946,8 @@ export let reactions = [
 			return false;
 		},
 		onMoveTo(level, tilePos, index) {
-			level.redKey++;
+			// level.redKey++;
+			level.inventory.push(Tile.RedKey);
 		}
 	},
 	{ // GreenKey: 102,
@@ -949,7 +955,8 @@ export let reactions = [
 			return false;
 		},
 		onMoveTo(level, tilePos, index) {
-			level.greenKey++;
+			// level.greenKey++;
+			level.inventory.push(Tile.GreenKey);
 		}
 	},
 	{ // YellowKey: 103,
@@ -957,7 +964,8 @@ export let reactions = [
 			return false;
 		},
 		onMoveTo(level, tilePos, index) {
-			level.yellowKey++;
+			// level.yellowKey++;
+			level.inventory.push(Tile.YellowKey);
 		}
 	},
 	{ // Flippers: 104,
