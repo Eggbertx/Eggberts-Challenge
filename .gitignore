@@ -2,5 +2,6 @@ dist/
 docs/
 sounds/*
 music/*
+images/old/
 CHIPS.DAT
 *.ssuser
