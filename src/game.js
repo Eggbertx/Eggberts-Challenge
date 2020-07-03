@@ -1,13 +1,12 @@
 import { Console, Music, Prim, Thread } from 'sphere-runtime';
-import { registerEvent } from 'buttonEvent';
+import { InputEventEmitter } from 'inputevents';
 
 import { ChipsDat, Tile } from './chipdata';
-
 
 const font = Font.Default;
 const screen = Surface.Screen;
 const kb = Keyboard.Default;
-// const mouse = Mouse.Default;
+const mouse = Mouse.Default;
 const console = new Console();
 
 const view = {x:17,y:17,x2:303,y2:303}
@@ -23,6 +22,7 @@ const CHIPSLEFT_POS = {x: 368, y: 197};
 
 const inventoryPos = {x:326, y:232};
 let digitsX = []; // each digt is 16x27
+let input = new InputEventEmitter();
 
 
 function posToIndex(x, y) {
@@ -57,16 +57,18 @@ export default class Game extends Thread {
 		this.items = [];
 		this.lastPressedButtons = []; // example: {device: Keyboard.Default, key: Key.Up, time: num}
 
-		registerEvent(Keyboard.Default, Key.Up, () => {
+		input.setButtonEvent(kb, Key.Escape, Sphere.shutDown);
+
+		input.setButtonEvent(kb, Key.Up, () => {
 			this.move(this.playerPos, 0, -1, 0);
-		});
-		registerEvent(Keyboard.Default, Key.Down, () => {
+		})
+		input.setButtonEvent(kb, Key.Down, () => {
 			this.move(this.playerPos, 0, 1, 0);
 		});
-		registerEvent(Keyboard.Default, Key.Left, () => {
+		input.setButtonEvent(kb, Key.Left, () => {
 			this.move(this.playerPos, -1, 0, 0);
 		});
-		registerEvent(Keyboard.Default, Key.Right, () => {
+		input.setButtonEvent(kb, Key.Right, () => {
 			this.move(this.playerPos, 1, 0, 0);
 		});
 
@@ -296,7 +298,6 @@ export default class Game extends Thread {
 	}
 
 	on_update() {
-		if(kb.isPressed(Key.Escape)) Sphere.shutDown();
 		// this.playerPos = this.getPlayerPos();
 		let newNow = Date.now();
 		if(newNow >= this.now + 1000) {
