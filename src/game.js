@@ -1,4 +1,4 @@
-import { Console, Music, Prim, Thread } from 'sphere-runtime';
+import { Console, Music, Prim, Random, Thread } from 'sphere-runtime';
 import { InputEventEmitter } from 'inputevents';
 
 import { ChipsDat, Tile } from './chipdata';
@@ -72,15 +72,39 @@ export default class Game extends Thread {
 			this.move(this.playerPos, 1, 0, 0);
 		});
 
-		Music.push("@/music/CHIP02.OGG");
-		Music.push("@/music/CHIP01.OGG");
-		Music.push("@/music/CANYON.OGG");
-
+		this.playSong();
 		this.chipsDat = new ChipsDat(console);
-		this.chipsDat.loadGraphics("@/images/tileset.png");
-		this.chipsDat.loadSounds();
-		this.chipsDat.loadLevels("@/CHIPS.DAT");
-		this.playerPos = this.getPlayerPos();
+	}
+
+	start() {
+		super.start().then(() => {
+			let datFile = "@/CHIPS.DAT";
+			if(arguments.length > 0)
+				datFile = arguments[0];
+			this.chipsDat.loadLevels(datFile);
+			this.chipsDat.loadGraphics("@/images/tileset.png");
+			this.chipsDat.loadSounds();
+			this.playerPos = this.getPlayerPos();
+		});
+	}
+
+	playSong(song) {
+		if(song) {
+			Music.play(song);
+			return;
+		}
+		let ds = new DirectoryStream("@/music");
+		let songs = [];
+		while(song = ds.next(), song.value) {
+			if(song.value.fullPath.toLowerCase().endsWith(".ogg")) {
+				songs.push(song.value.fullPath);
+			}
+		}
+		if(songs.length == 0) {
+			console.log("No songs found");
+			return;
+		}
+		Music.play(Random.sample(songs));
 	}
 
 	get currentLevel() {
@@ -300,6 +324,8 @@ export default class Game extends Thread {
 	on_update() {
 		// this.playerPos = this.getPlayerPos();
 		let newNow = Date.now();
+		if(!this.currentLevel)
+			return;
 		if(newNow >= this.now + 1000) {
 			this.now = newNow;
 			this.currentLevel.timeLeft--;
